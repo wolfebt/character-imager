@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -157,7 +157,12 @@
                 <!-- Image Composition -->
                 <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="md:col-span-2 font-bold text-xl text-cyan-400 border-b border-gray-700 pb-2 mb-2">Image Composition</div>
+                        <div class="md:col-span-2 font-bold text-xl text-cyan-400 border-b border-gray-700 pb-2 mb-2 flex items-center justify-between">
+                            <span>Image Composition</span>
+                            <button id="settings-btn" class="text-gray-400 hover:text-white" title="API Key Settings">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 0 2l-.15.08a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1 0-2l.15-.08a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                            </button>
+                        </div>
                         <div class="md:col-span-1">
                             <label class="block text-sm font-medium text-gray-300 mb-2">Framing</label>
                             <div class="space-y-2">
@@ -220,6 +225,27 @@
         </main>
     </div>
 
+    <footer class="text-center py-8">
+        <p class="text-gray-500 text-sm font-extralight">Character Imager</p>
+        <p class="text-gray-500 text-sm font-extralight">Wolfe.BT@TangentLLC</p>
+    </footer>
+
+    <!-- API Key Modal -->
+    <div id="api-key-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+        <div class="bg-gray-800 rounded-lg p-8 w-full max-w-md mx-4">
+            <h2 class="text-2xl font-bold mb-4">API Key Settings</h2>
+            <p class="text-gray-400 mb-4">Please provide your Google AI API key. This will be stored in your browser's local storage and will not be shared.</p>
+            <div>
+                <label for="api-key-input" class="block text-sm font-medium text-gray-300 mb-1">Google AI API Key</label>
+                <input type="password" id="api-key-input" class="w-full bg-gray-700 border border-gray-600 text-white rounded-md p-2 focus:ring-cyan-500 focus:border-cyan-500">
+            </div>
+            <div class="mt-6 flex justify-end space-x-4">
+                <button id="close-modal-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md">Cancel</button>
+                <button id="save-api-key-btn" class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-md">Save</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // --- DOM Element References ---
@@ -234,67 +260,82 @@
             const imagePlaceholder = document.getElementById('image-placeholder');
             const errorMessageEl = document.getElementById('error-message');
             const copyMessageEl = document.getElementById('copy-message');
+            const settingsBtn = document.getElementById('settings-btn');
+            const apiKeyModal = document.getElementById('api-key-modal');
+            const closeModalBtn = document.getElementById('close-modal-btn');
+            const saveApiKeyBtn = document.getElementById('save-api-key-btn');
+            const apiKeyInput = document.getElementById('api-key-input');
+
+            let userApiKey = '';
+
+            // --- API Key Modal Logic ---
+            function openModal() {
+                apiKeyInput.value = localStorage.getItem('googleApiKey') || '';
+                apiKeyModal.classList.remove('hidden');
+            }
+
+            function closeModal() {
+                apiKeyModal.classList.add('hidden');
+            }
+
+            settingsBtn.addEventListener('click', openModal);
+            closeModalBtn.addEventListener('click', closeModal);
+            saveApiKeyBtn.addEventListener('click', () => {
+                const key = apiKeyInput.value.trim();
+                if (key) {
+                    localStorage.setItem('googleApiKey', key);
+                    userApiKey = key;
+                } else {
+                    localStorage.removeItem('googleApiKey');
+                    userApiKey = '';
+                }
+                closeModal();
+            });
+
+            apiKeyModal.addEventListener('click', (e) => {
+                if (e.target === apiKeyModal) {
+                    closeModal();
+                }
+            });
+
+            // Load saved API key on start
+            userApiKey = localStorage.getItem('googleApiKey') || '';
 
             // --- Event Listener for "Generate Prompt" Button ---
             generatePromptBtn.addEventListener('click', () => {
                 const formData = new FormData(form);
                 const attributes = Object.fromEntries(formData.entries());
                 
-                // Manually get composition values since they are outside the main form
                 attributes.framing = document.querySelector('input[name="framing"]:checked').value;
                 attributes.style = document.querySelector('input[name="style"]:checked').value;
 
-
-                // Clear previous results
                 generatedImageEl.classList.add('hidden');
                 imagePlaceholder.classList.remove('hidden');
                 downloadImageBtn.classList.add('hidden');
                 errorMessageEl.textContent = '';
                 copyMessageEl.textContent = '';
 
-                // --- 1. Define Style ---
                 let styleDescription = "";
                 switch (attributes.style) {
-                    case 'photorealistic':
-                        styleDescription = "photorealistic, hyperdetailed, 8k, high quality";
-                        break;
-                    case 'anime':
-                        styleDescription = "anime art style, vibrant colors, clean line art, by studio ghibli";
-                        break;
-                    case 'sketch':
-                        styleDescription = "detailed pencil sketch, monochrome, cross-hatching, on textured paper";
-                        break;
-                    case 'painting':
-                    default:
-                        styleDescription = "realistic digital painting, detailed brushwork, dramatic lighting";
-                        break;
+                    case 'photorealistic': styleDescription = "photorealistic, hyperdetailed, 8k, high quality"; break;
+                    case 'anime': styleDescription = "anime art style, vibrant colors, clean line art, by studio ghibli"; break;
+                    case 'sketch': styleDescription = "detailed pencil sketch, monochrome, cross-hatching, on textured paper"; break;
+                    default: styleDescription = "realistic digital painting, detailed brushwork, dramatic lighting"; break;
                 }
 
-                // --- 2. Emphasize User Details ---
                 let emphasizedDetails = "";
                 if (attributes.details && attributes.details.trim() !== '') {
-                    // Add high weight to the entire "details" field content
                     emphasizedDetails = `(${(attributes.details.trim())}:1.5)`;
                 }
 
-                // --- 3. Define Framing ---
-                let framingDescription = "";
                 let characterDescription = `a ${attributes.gender.toLowerCase()} ${attributes.archetype.toLowerCase() || 'character'}`;
-                
+                let framingDescription = "";
                 switch (attributes.framing) {
-                    case 'full_body':
-                        framingDescription = `Full body portrait of ${characterDescription}.`;
-                        break;
-                    case 'sheet':
-                        framingDescription = `Character concept sheet for ${characterDescription}, multiple views including front, side, and back, plus a headshot. Plain background.`;
-                        break;
-                    case 'portrait':
-                    default:
-                        framingDescription = `Bust portrait (head and shoulders) of ${characterDescription}.`;
-                        break;
+                    case 'full_body': framingDescription = `Full body portrait of ${characterDescription}.`; break;
+                    case 'sheet': framingDescription = `Character concept sheet for ${characterDescription}, multiple views including front, side, and back, plus a headshot. Plain background.`; break;
+                    default: framingDescription = `Bust portrait (head and shoulders) of ${characterDescription}.`; break;
                 }
                 
-                // --- 4. Assemble the Prompt ---
                 const prompt = `${framingDescription}
                 **Appearance:** ${emphasizedDetails} ${attributes.build.toLowerCase()} build, ${attributes.height_ft} ft ${attributes.height_in} in tall, ~${attributes.weight} lbs. They have a ${attributes.faceShape.toLowerCase()} face, ${attributes.eyeColor.toLowerCase()} eyes, and ${attributes.skinTone.toLowerCase()} skin tone. Their hair is ${attributes.hairColor.toLowerCase()} and styled as ${attributes.hairStyle.toLowerCase()}. Notable features: ${attributes.scars}, ${attributes.tattoos}.
                 **Outfit:** Dressed in ${attributes.clothing.toLowerCase()}, wearing ${attributes.accessories.toLowerCase()}.
@@ -302,7 +343,6 @@
                 **Setting:** The background is a ${attributes.background.toLowerCase()}.
                 **Style:** ${styleDescription}`.replace(/\s+/g, ' ').trim();
                 
-                // Display the full prompt information to the user
                 const negativePrompts = attributes.negative_prompts;
                 generatedPromptEl.value = `POSITIVE PROMPT:\n${prompt}\n\nNEGATIVE PROMPT:\n${negativePrompts}`;
             });
@@ -314,23 +354,24 @@
                         .then(() => {
                             copyMessageEl.textContent = 'Prompt copied to clipboard!';
                             setTimeout(() => { copyMessageEl.textContent = ''; }, 3000);
-                        })
-                        .catch(err => {
-                            errorMessageEl.textContent = 'Failed to copy prompt.';
-                            console.error('Copy failed:', err);
                         });
                 }
             });
 
             // --- Event Listener for "Generate Image" Button ---
             generateImageBtn.addEventListener('click', async () => {
+                if (!userApiKey) {
+                    errorMessageEl.textContent = 'API Key not set. Please add it in the settings (gear icon).';
+                    openModal();
+                    return;
+                }
+                
                 const fullPromptText = generatedPromptEl.value;
                 if (!fullPromptText) {
                     errorMessageEl.textContent = 'Please generate a prompt first.';
                     return;
                 }
 
-                // --- Extract Positive and Negative Prompts ---
                 const promptParts = fullPromptText.split('NEGATIVE PROMPT:');
                 const positivePrompt = promptParts[0].replace('POSITIVE PROMPT:', '').trim();
                 const negativePrompt = promptParts[1] ? promptParts[1].trim() : "";
@@ -338,8 +379,7 @@
                 setIsLoading(true);
 
                 try {
-                    // --- API Call to Vertex AI / Imagen ---
-                    const apiKey = ""; // This will be handled by the environment.
+                    const apiKey = userApiKey;
                     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
                     
                     const payload = {
@@ -372,8 +412,7 @@
                     } else {
                         throw new Error('API returned a valid response but no image data was found.');
                     }
-                } catch (err)
- {
+                } catch (err) {
                     console.error("Image generation failed:", err);
                     errorMessageEl.textContent = `Error: ${err.message}`;
                 } finally {
